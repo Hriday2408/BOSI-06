@@ -3,602 +3,478 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HexOS — BOSI-6 Knowledge Navigator</title>
-<style>
-  :root {
-    --bg: #0d0d0b;
-    --bg2: #161614;
-    --bg3: #1e1e1b;
-    --border: rgba(255,255,255,0.08);
-    --border2: rgba(255,255,255,0.14);
-    --text: #e8e6dc;
-    --text2: #9e9b90;
-    --text3: #5c5a54;
-    --amber: #EF9F27;
-    --amber-dim: rgba(239,159,39,0.2);
-    --font: 'DM Sans', system-ui, sans-serif;
-    --mono: 'DM Mono', monospace;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); }
-
-  #app { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
-
-  /* Top bar */
-  #topbar {
-    height: 48px; min-height: 48px;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 16px;
-    border-bottom: 0.5px solid var(--border);
-    background: var(--bg2);
-    z-index: 20;
-    gap: 12px;
-  }
-  #topbar-left { display: flex; align-items: center; gap: 10px; }
-  .logo { font-size: 15px; font-weight: 500; color: var(--text); letter-spacing: -0.02em; }
-  .logo span { color: var(--amber); }
-  .version { font-size: 11px; color: var(--text3); font-family: var(--mono); border: 0.5px solid var(--border2); padding: 2px 7px; border-radius: 4px; }
-  #breadcrumb { display: flex; align-items: center; gap: 4px; flex: 1; overflow-x: auto; scrollbar-width: none; }
-  #breadcrumb::-webkit-scrollbar { display: none; }
-  .bc { font-size: 12px; color: var(--text2); cursor: pointer; padding: 3px 8px; border-radius: 4px; white-space: nowrap; transition: all .15s; }
-  .bc:hover { background: var(--bg3); color: var(--text); }
-  .bc.active { color: var(--text); font-weight: 500; }
-  .bc-sep { font-size: 12px; color: var(--text3); }
-  #topbar-right { display: flex; align-items: center; gap: 6px; }
-  .top-btn { font-size: 12px; padding: 4px 10px; border-radius: 4px; border: 0.5px solid var(--border2); background: transparent; color: var(--text2); cursor: pointer; font-family: var(--font); transition: all .15s; white-space: nowrap; }
-  .top-btn:hover { background: var(--bg3); color: var(--text); }
-
-  /* Main area */
-  #main { flex: 1; display: flex; overflow: hidden; }
-
-  /* Canvas */
-  #canvas-wrap { flex: 1; position: relative; }
-  #canvas { width: 100%; height: 100%; cursor: default; }
-
-  /* Toolbar */
-  #toolbar {
-    position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
-    display: flex; flex-direction: column; gap: 4px;
-    background: var(--bg2); border: 0.5px solid var(--border2);
-    border-radius: 8px; padding: 6px;
-    z-index: 10;
-  }
-  .t-btn {
-    width: 36px; height: 36px; border-radius: 6px;
-    border: 0.5px solid transparent;
-    background: transparent; color: var(--text2);
-    cursor: pointer; font-size: 13px; font-family: var(--font);
-    display: flex; align-items: center; justify-content: center;
-    transition: all .15s; position: relative;
-  }
-  .t-btn:hover { background: var(--bg3); color: var(--text); }
-  .t-btn.active { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); }
-  .t-btn[title]:hover::after {
-    content: attr(title);
-    position: absolute; left: 44px; top: 50%; transform: translateY(-50%);
-    background: var(--bg2); border: 0.5px solid var(--border2);
-    color: var(--text); font-size: 11px; padding: 4px 8px; border-radius: 4px;
-    white-space: nowrap; pointer-events: none; z-index: 100;
-  }
-  .t-sep { height: 0.5px; background: var(--border); margin: 2px 0; }
-
-  /* Info panel */
-  #info {
-    width: 220px; min-width: 220px;
-    border-left: 0.5px solid var(--border);
-    background: var(--bg2);
-    padding: 16px; overflow-y: auto;
-    display: flex; flex-direction: column; gap: 12px;
-  }
-  .info-label { font-size: 10px; font-weight: 500; color: var(--text3); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
-  .info-val { font-size: 13px; color: var(--text); line-height: 1.5; }
-  .info-title { font-size: 15px; font-weight: 500; color: var(--text); }
-  .tag { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 3px; border: 0.5px solid var(--border2); color: var(--text2); margin: 2px 2px 0 0; font-family: var(--mono); }
-  .rks-mini { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
-  .rks-domain { display: flex; align-items: center; gap: 6px; }
-  .rks-d-label { font-size: 11px; font-family: var(--mono); color: var(--text2); width: 14px; }
-  .rks-d-track { flex: 1; height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
-  .rks-d-fill { height: 100%; background: var(--amber); border-radius: 2px; transition: width .4s; }
-  .rks-d-val { font-size: 10px; font-family: var(--mono); color: var(--text3); min-width: 20px; text-align: right; }
-  .score-input { width: 100%; background: var(--bg3); border: 0.5px solid var(--border2); border-radius: 4px; color: var(--text); font-family: var(--font); font-size: 13px; padding: 6px 8px; margin-top: 4px; }
-  .score-input:focus { outline: none; border-color: var(--amber); }
-  .info-btn { width: 100%; padding: 6px; background: transparent; border: 0.5px solid var(--border2); border-radius: 4px; color: var(--text2); font-family: var(--font); font-size: 12px; cursor: pointer; transition: all .15s; }
-  .info-btn:hover { background: var(--bg3); color: var(--text); }
-  .merge-indicator { font-size: 11px; color: var(--amber); padding: 6px 8px; background: var(--amber-dim); border-radius: 4px; text-align: center; }
-
-  /* Mode hint */
-  #mode-hint {
-    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
-    font-size: 11px; color: var(--text3); background: var(--bg2);
-    border: 0.5px solid var(--border); padding: 4px 12px; border-radius: 20px;
-    white-space: nowrap; pointer-events: none; z-index: 10;
-  }
-</style>
+<title>BOSI-6 — Robotics Knowledge Pipeline</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&family=DM+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a1916;
+  --ink2: #4a4840;
+  --ink3: #9a9890;
+  --paper: #f5f3ee;
+  --paper2: #eeece6;
+  --paper3: #e4e1d8;
+  --accent: #c84b1a;
+  --accent2: #1a5fc8;
+  --gold: #b8860b;
+  --red: #993C1D;
+  --blue: #185FA5;
+  --green: #3B6D11;
+  --amber: #854F0B;
+  --purple: #3C3489;
+  --serif: 'Instrument Serif', Georgia, serif;
+  --sans: 'DM Sans', system-ui, sans-serif;
+  --mono: 'DM Mono', monospace;
+  --r: 6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);line-height:1.6;overflow-x:hidden}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(245,243,238,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--paper3);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 40px}
+.nav-logo{font-family:var(--serif);font-size:20px;color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:8px}
+.nav-logo span{color:var(--accent);font-style:italic}
+.nav-links{display:flex;align-items:center;gap:2px}
+.nav-links a{font-size:13px;color:var(--ink2);text-decoration:none;padding:6px 14px;border-radius:var(--r);transition:all .15s;font-weight:400}
+.nav-links a:hover{background:var(--paper2);color:var(--ink)}
+.nav-links a.active{color:var(--ink);font-weight:500}
+.nav-cta{font-size:13px;font-weight:500;color:var(--paper);background:var(--ink);padding:7px 16px;border-radius:var(--r);text-decoration:none;transition:all .15s;margin-left:8px}
+.nav-cta:hover{background:var(--accent)}
+
+/* PAGES */
+.page{display:none;padding-top:56px;min-height:100vh;animation:fadeIn .25s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* HERO */
+.hero{min-height:calc(100vh - 56px);display:flex;flex-direction:column;justify-content:center;padding:80px 40px 60px;max-width:1100px;margin:0 auto}
+.hero-eyebrow{font-family:var(--mono);font-size:11px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:24px;display:flex;align-items:center;gap:10px}
+.hero-eyebrow::before{content:'';width:32px;height:1px;background:var(--ink3)}
+.hero h1{font-family:var(--serif);font-size:clamp(52px,7vw,88px);line-height:1.05;color:var(--ink);margin-bottom:28px;font-weight:400}
+.hero h1 em{color:var(--accent);font-style:italic}
+.hero-sub{font-size:17px;color:var(--ink2);max-width:540px;line-height:1.65;margin-bottom:44px;font-weight:300}
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap}
+.btn-primary{font-size:14px;font-weight:500;color:var(--paper);background:var(--ink);padding:12px 24px;border-radius:var(--r);text-decoration:none;border:none;cursor:pointer;transition:all .15s;font-family:var(--sans)}
+.btn-primary:hover{background:var(--accent)}
+.btn-secondary{font-size:14px;font-weight:400;color:var(--ink);background:transparent;padding:12px 24px;border-radius:var(--r);text-decoration:none;border:1px solid var(--paper3);cursor:pointer;transition:all .15s;font-family:var(--sans)}
+.btn-secondary:hover{background:var(--paper2);border-color:var(--ink3)}
+.hero-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--paper3);border:1px solid var(--paper3);border-radius:var(--r);overflow:hidden;margin-top:72px}
+.hero-stat{background:var(--paper);padding:20px 24px}
+.hero-stat-num{font-family:var(--serif);font-size:36px;color:var(--ink);line-height:1}
+.hero-stat-label{font-size:12px;color:var(--ink3);margin-top:4px;font-family:var(--mono)}
+
+/* SECTION */
+.section{padding:80px 40px;max-width:1100px;margin:0 auto}
+.section-label{font-family:var(--mono);font-size:11px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px}
+.section-title{font-family:var(--serif);font-size:clamp(36px,4vw,52px);color:var(--ink);font-weight:400;margin-bottom:20px;line-height:1.1}
+.section-title em{color:var(--accent);font-style:italic}
+.section-body{font-size:16px;color:var(--ink2);max-width:600px;line-height:1.7;font-weight:300}
+.divider{border:none;border-top:1px solid var(--paper3);margin:0 40px}
+
+/* CARDS */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1px;background:var(--paper3);border:1px solid var(--paper3);border-radius:var(--r);overflow:hidden;margin-top:40px}
+.card{background:var(--paper);padding:28px;transition:background .15s}
+.card:hover{background:var(--paper2)}
+.card-icon{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:16px}
+.card-title{font-size:15px;font-weight:500;color:var(--ink);margin-bottom:8px}
+.card-body{font-size:13px;color:var(--ink2);line-height:1.6;font-weight:300}
+.card-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:14px}
+.tag{font-size:11px;font-family:var(--mono);padding:2px 7px;border-radius:3px;border:1px solid var(--paper3);color:var(--ink3)}
+
+/* TRACKS */
+.track-layout{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--paper3);border:1px solid var(--paper3);border-radius:var(--r);overflow:hidden;margin-top:40px}
+.track-card{background:var(--paper);padding:36px;position:relative;overflow:hidden}
+.track-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%}
+.track-card.red::before{background:var(--red)}
+.track-card.blue::before{background:var(--blue)}
+.track-card.green::before{background:var(--green)}
+.track-card.amber::before{background:var(--amber)}
+.track-card-label{font-family:var(--mono);font-size:10px;color:var(--ink3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.track-card-title{font-family:var(--serif);font-size:26px;color:var(--ink);margin-bottom:12px;font-weight:400}
+.track-card-body{font-size:13px;color:var(--ink2);line-height:1.65;font-weight:300;margin-bottom:20px}
+.track-milestones{display:flex;flex-direction:column;gap:8px}
+.milestone{display:flex;align-items:flex-start;gap:10px;font-size:12px;color:var(--ink2)}
+.milestone-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.milestone-dot.red{background:var(--red)}
+.milestone-dot.blue{background:var(--blue)}
+.milestone-dot.green{background:var(--green)}
+.milestone-dot.amber{background:var(--amber)}
+
+/* RKS PAGE */
+.rks-formula{font-family:var(--mono);font-size:13px;background:var(--ink);color:var(--paper);padding:20px 24px;border-radius:var(--r);margin:24px 0;line-height:1.8}
+.rks-formula strong{color:#EF9F27}
+.domain-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--paper3);border:1px solid var(--paper3);border-radius:var(--r);overflow:hidden;margin-top:28px}
+.domain-card{background:var(--paper);padding:20px;display:flex;flex-direction:column;gap:6px}
+.domain-letter{font-family:var(--serif);font-size:32px;color:var(--ink);line-height:1}
+.domain-name{font-size:13px;font-weight:500;color:var(--ink)}
+.domain-desc{font-size:12px;color:var(--ink3);font-weight:300;line-height:1.5}
+.domain-type{font-size:10px;font-family:var(--mono);padding:2px 6px;border-radius:3px;align-self:flex-start;margin-top:4px}
+.domain-type.core{background:#E6F1FB;color:#185FA5}
+.domain-type.support{background:#F1EFE8;color:#5F5E5A}
+
+.tier-list{display:flex;flex-direction:column;gap:1px;background:var(--paper3);border:1px solid var(--paper3);border-radius:var(--r);overflow:hidden;margin-top:28px}
+.tier-row{background:var(--paper);padding:16px 20px;display:flex;align-items:center;gap:16px;transition:background .15s}
+.tier-row:hover{background:var(--paper2)}
+.tier-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex-shrink:0}
+.tier-info{flex:1}
+.tier-name{font-size:14px;font-weight:500;color:var(--ink)}
+.tier-range{font-size:11px;font-family:var(--mono);color:var(--ink3);margin-top:2px}
+.tier-bar-outer{width:160px;height:4px;background:var(--paper3);border-radius:2px;overflow:hidden;flex-shrink:0}
+.tier-bar-inner{height:100%;border-radius:2px}
+
+/* TIMELINE */
+.timeline{display:flex;flex-direction:column;gap:0;margin-top:36px;position:relative}
+.timeline::before{content:'';position:absolute;left:19px;top:20px;bottom:20px;width:1px;background:var(--paper3)}
+.tl-item{display:flex;gap:20px;align-items:flex-start;padding:16px 0}
+.tl-dot{width:10px;height:10px;border-radius:50%;background:var(--ink);flex-shrink:0;margin-top:5px;position:relative;z-index:1;border:3px solid var(--paper);box-shadow:0 0 0 1px var(--ink3)}
+.tl-dot.highlight{background:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.tl-month{font-family:var(--mono);font-size:11px;color:var(--ink3);min-width:32px;margin-top:3px}
+.tl-content{flex:1}
+.tl-title{font-size:14px;font-weight:500;color:var(--ink)}
+.tl-desc{font-size:12px;color:var(--ink2);margin-top:2px;font-weight:300}
+
+/* ABOUT */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start;margin-top:40px}
+.philosophy-list{display:flex;flex-direction:column;gap:0;border:1px solid var(--paper3);border-radius:var(--r);overflow:hidden;margin-top:20px}
+.philosophy-item{padding:14px 18px;border-bottom:1px solid var(--paper3);display:flex;gap:14px;align-items:flex-start}
+.philosophy-item:last-child{border-bottom:none}
+.philosophy-q{font-family:var(--mono);font-size:11px;color:var(--ink3);min-width:28px;padding-top:2px}
+.philosophy-a{font-size:13px;color:var(--ink2);line-height:1.55;font-weight:300}
+.org-tree{display:flex;flex-direction:column;gap:1px;background:var(--paper3);border:1px solid var(--paper3);border-radius:var(--r);overflow:hidden;margin-top:20px}
+.org-row{background:var(--paper);padding:12px 16px}
+.org-label{font-size:10px;font-family:var(--mono);color:var(--ink3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}
+.org-val{font-size:13px;color:var(--ink);font-weight:400}
+.org-sub{font-size:12px;color:var(--ink2);font-weight:300;margin-top:2px}
+
+/* APPLY */
+.apply-layout{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start;margin-top:40px}
+.apply-form{display:flex;flex-direction:column;gap:14px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-label{font-size:12px;font-weight:500;color:var(--ink2)}
+.form-input,.form-select,.form-textarea{font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--paper);border:1px solid var(--paper3);border-radius:var(--r);padding:10px 12px;width:100%;transition:border-color .15s;outline:none}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--ink)}
+.form-textarea{resize:vertical;min-height:100px}
+.form-note{font-size:12px;color:var(--ink3);line-height:1.5;font-weight:300}
+.apply-info{display:flex;flex-direction:column;gap:16px}
+.apply-info-card{background:var(--paper2);border-radius:var(--r);padding:20px;border:1px solid var(--paper3)}
+.apply-info-title{font-size:13px;font-weight:500;color:var(--ink);margin-bottom:8px}
+.apply-info-body{font-size:12px;color:var(--ink2);line-height:1.6;font-weight:300}
+
+/* FOOTER */
+footer{border-top:1px solid var(--paper3);padding:32px 40px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.footer-logo{font-family:var(--serif);font-size:16px;color:var(--ink2)}
+.footer-logo span{color:var(--accent);font-style:italic}
+.footer-text{font-size:12px;color:var(--ink3);font-family:var(--mono)}
+
+@media(max-width:768px){
+  nav{padding:0 20px}.hero{padding:40px 20px 40px}.hero-stats{grid-template-columns:repeat(2,1fr)}
+  .section{padding:60px 20px}.track-layout{grid-template-columns:1fr}.two-col{grid-template-columns:1fr;gap:32px}
+  .apply-layout{grid-template-columns:1fr}.domain-grid{grid-template-columns:repeat(2,1fr)}
+  .nav-links{display:none}footer{padding:24px 20px}
+}
+</style>
 </head>
 <body>
-<div id="app">
-  <div id="topbar">
-    <div id="topbar-left">
-      <div class="logo">Hex<span>OS</span></div>
-      <div class="version">v1.0 · BOSI-6</div>
-      <div style="width:0.5px;height:20px;background:var(--border)"></div>
-      <div id="breadcrumb"></div>
+
+<nav>
+  <a class="nav-logo" href="#" onclick="showPage('home')">BOSI<span>-6</span></a>
+  <div class="nav-links">
+    <a href="#" onclick="showPage('home')" class="active" id="nav-home">Home</a>
+    <a href="#" onclick="showPage('about')" id="nav-about">About</a>
+    <a href="#" onclick="showPage('tracks')" id="nav-tracks">Tracks</a>
+    <a href="#" onclick="showPage('rks')" id="nav-rks">RKS</a>
+    <a href="#" onclick="showPage('apply')" id="nav-apply">Apply</a>
+  </div>
+  <a class="nav-cta" href="#" onclick="showPage('apply')">Join as Seeker →</a>
+</nav>
+
+<!-- HOME -->
+<div class="page active" id="page-home">
+  <div class="hero">
+    <div class="hero-eyebrow">IIT Jammu · Robotics Education Initiative</div>
+    <h1>Answer the<br><em>six questions.</em><br>Build anything.</h1>
+    <p class="hero-sub">BOSI-6 is a structured robotics pipeline where seekers develop across mechanical, electrical, coding, and soft-skill domains — evaluated through real competitions and culminating in the 48-hour Triathlon makeathon.</p>
+    <div class="hero-actions">
+      <a class="btn-primary" href="#" onclick="showPage('apply')">Apply as Seeker</a>
+      <a class="btn-secondary" href="#" onclick="showPage('about')">Understand the system →</a>
     </div>
-    <div id="topbar-right">
-      <button class="top-btn" onclick="goUp()">↑ Up</button>
-      <button class="top-btn" onclick="toggleInfo()">Panel</button>
-      <button class="top-btn" onclick="resetView()">Reset</button>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="hero-stat-num">6</div><div class="hero-stat-label">Knowledge domains</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">3</div><div class="hero-stat-label">Parallel tracks</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">48hr</div><div class="hero-stat-label">Annual Triathlon</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">6</div><div class="hero-stat-label">Seeker tiers</div></div>
     </div>
   </div>
-  <div id="main">
-    <div id="canvas-wrap">
-      <canvas id="canvas"></canvas>
-      <div id="toolbar">
-        <button class="t-btn active" id="tbtn-magnify" onclick="setMode('magnify')" title="Magnify — zoom in">⊕</button>
-        <button class="t-btn" id="tbtn-move" onclick="setMode('move')" title="Move — pan canvas">✥</button>
-        <div class="t-sep"></div>
-        <button class="t-btn" id="tbtn-modify" onclick="setMode('modify')" title="Modify — edit content">✎</button>
-        <button class="t-btn" id="tbtn-mark" onclick="setMode('mark')" title="Mark — flag milestone">◆</button>
-        <div class="t-sep"></div>
-        <button class="t-btn" id="tbtn-merge" onclick="setMode('merge')" title="Merge — connect nodes">⌁</button>
-        <button class="t-btn" id="tbtn-score" onclick="setMode('score')" title="Score — enter RKS scores">◎</button>
+  <hr class="divider">
+  <div class="section">
+    <div class="section-label">What we build</div>
+    <div class="section-title">Three tracks.<br><em>One pipeline.</em></div>
+    <p class="section-body">Seekers develop simultaneously across BattleBot combat robotics, drone and aviation systems, and LeMansar RC endurance racing. Each track trains and tests different domain combinations — all feeding into the Robotic Knowledge Scale.</p>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon" style="background:#FAECE7">⚔</div>
+        <div class="card-title">BattleBot</div>
+        <div class="card-body">Combat robotics from Antweight demo events to full Featherweight competitions — open to colleges nationwide.</div>
+        <div class="card-tags"><span class="tag">M</span><span class="tag">E</span><span class="tag">competition</span></div>
       </div>
-      <div id="mode-hint">Magnify — click a hexagon to zoom in</div>
-    </div>
-    <div id="info">
-      <div>
-        <div class="info-label">Selected node</div>
-        <div class="info-title" id="ip-title">BOSI-6</div>
+      <div class="card">
+        <div class="card-icon" style="background:#E6F1FB">✈</div>
+        <div class="card-title">Drone + Aviation</div>
+        <div class="card-body">Level 0→3 progression in flight systems. FPV, autonomy, waypoint navigation, and open creative projects at Level 3.</div>
+        <div class="card-tags"><span class="tag">M</span><span class="tag">E</span><span class="tag">C</span></div>
       </div>
-      <div>
-        <div class="info-label">Description</div>
-        <div class="info-val" id="ip-desc">The central robotics knowledge pipeline.</div>
-      </div>
-      <div id="ip-tags-wrap">
-        <div class="info-label">Tags</div>
-        <div id="ip-tags"></div>
-      </div>
-      <div id="ip-rks-wrap" style="display:none">
-        <div class="info-label">Domain score (0–10)</div>
-        <input class="score-input" type="number" id="ip-score" min="0" max="10" step="0.5" placeholder="Enter score..." oninput="saveScore()">
-      </div>
-      <div id="ip-children-wrap">
-        <div class="info-label">Children</div>
-        <div class="info-val" id="ip-children" style="color:var(--text3)">—</div>
-      </div>
-      <div id="ip-merge-wrap" style="display:none">
-        <div class="merge-indicator" id="ip-merge-msg">Select first node to merge</div>
-      </div>
-      <div>
-        <div class="info-label">RKS scores stored</div>
-        <div class="rks-mini" id="ip-rks-mini"></div>
+      <div class="card">
+        <div class="card-icon" style="background:#EAF3DE">🏎</div>
+        <div class="card-title">LeMansar</div>
+        <div class="card-body">24-minute RC car endurance race at our Mansar building. Inspired by the Le Mans 24-hour format. Speed and reliability.</div>
+        <div class="card-tags"><span class="tag">M</span><span class="tag">endurance</span></div>
       </div>
     </div>
   </div>
+  <hr class="divider">
+  <div class="section">
+    <div class="section-label">The annual cycle</div>
+    <div class="section-title">August to April.<br><em>Every year.</em></div>
+    <p class="section-body">The pipeline runs on an academic calendar. Each cohort enters in August and the year builds toward the Triathlon in March — after which the cycle resets with a new cohort.</p>
+    <div class="timeline">
+      <div class="tl-item"><div class="tl-dot"></div><div class="tl-month">Aug</div><div class="tl-content"><div class="tl-title">Component Selection + Intro to E</div><div class="tl-desc">Pipeline kick-off. Electrical domain introduction.</div></div></div>
+      <div class="tl-item"><div class="tl-dot"></div><div class="tl-month">Sept</div><div class="tl-content"><div class="tl-title">Antweight Demo + Glider + Intro to M</div><div class="tl-desc">First public events. Mechanical domain introduction.</div></div></div>
+      <div class="tl-item"><div class="tl-dot"></div><div class="tl-month">Oct</div><div class="tl-content"><div class="tl-title">Merch + Intro to C + LeMansar External Release</div><div class="tl-desc">Outreach surge. Coding introduction. LeMansar goes public.</div></div></div>
+      <div class="tl-item"><div class="tl-dot"></div><div class="tl-month">Nov</div><div class="tl-content"><div class="tl-title">LeMansar Competition</div><div class="tl-desc">1st November. 24-min RC endurance race at Mansar building.</div></div></div>
+      <div class="tl-item"><div class="tl-dot" style="background:var(--paper3);box-shadow:0 0 0 1px var(--paper3)"></div><div class="tl-month">Dec</div><div class="tl-content"><div class="tl-title" style="color:var(--ink3)">Winter break</div><div class="tl-desc" style="color:var(--ink3)">No structured events.</div></div></div>
+      <div class="tl-item"><div class="tl-dot"></div><div class="tl-month">Jan</div><div class="tl-content"><div class="tl-title">Drone Bootcamp + Featherweight Build starts</div><div class="tl-desc">4-day drone bootcamp. BattleBot featherweight build begins.</div></div></div>
+      <div class="tl-item"><div class="tl-dot"></div><div class="tl-month">Feb</div><div class="tl-content"><div class="tl-title">Featherweight Internal + Drone Swarm Demo</div><div class="tl-desc">Internal competition. Swarm demonstration event.</div></div></div>
+      <div class="tl-item"><div class="tl-dot highlight"></div><div class="tl-month">Mar</div><div class="tl-content"><div class="tl-title" style="color:var(--accent)">48-Hour Triathlon Makeathon ★</div><div class="tl-desc">The Goblet. 10–12 seekers. All 6 domains. Full tool access.</div></div></div>
+      <div class="tl-item"><div class="tl-dot"></div><div class="tl-month">Apr</div><div class="tl-content"><div class="tl-title">Featherweight External</div><div class="tl-desc">Nationwide open competition. Outreach peak.</div></div></div>
+    </div>
+  </div>
+  <footer>
+    <div class="footer-logo">BOSI<span>-6</span></div>
+    <div class="footer-text">IIT Jammu · Robotics Education Initiative · 2026–27</div>
+  </footer>
+</div>
+
+<!-- ABOUT -->
+<div class="page" id="page-about">
+  <div class="section">
+    <div class="section-label">The philosophy</div>
+    <div class="section-title">Answer before<br><em>you act.</em></div>
+    <p class="section-body">BOSI-6 is built on a single principle: no action is taken without first answering six questions. The 5W1H framework isn't process overhead — it's a mindset that separates builders who copy from seekers who understand.</p>
+    <div class="two-col">
+      <div>
+        <div class="section-label" style="margin-top:0">The 6 questions</div>
+        <div class="philosophy-list">
+          <div class="philosophy-item"><div class="philosophy-q">Who</div><div class="philosophy-a">Who are we building for? Who is involved? Who evaluates?</div></div>
+          <div class="philosophy-item"><div class="philosophy-q">What</div><div class="philosophy-a">What are we building? What is the problem? What is the deliverable?</div></div>
+          <div class="philosophy-item"><div class="philosophy-q">Where</div><div class="philosophy-a">Where does this happen? Where are the resources?</div></div>
+          <div class="philosophy-item"><div class="philosophy-q">When</div><div class="philosophy-a">When is the deadline? When does each phase begin?</div></div>
+          <div class="philosophy-item"><div class="philosophy-q">Why</div><div class="philosophy-a">Why does this matter? Why this approach over another?</div></div>
+          <div class="philosophy-item"><div class="philosophy-q">How</div><div class="philosophy-a">How do we execute? How do we measure success?</div></div>
+        </div>
+      </div>
+      <div>
+        <div class="section-label" style="margin-top:0">The origin — BlackBosi</div>
+        <p style="font-size:14px;color:var(--ink2);line-height:1.7;font-weight:300;margin-bottom:20px">BOSI-6 began with a pair of Bosi Tools nose pliers used in Office Container 6 (OC-6) — the space where the founding team first built together. The plier was spray-painted black and became BlackBosi, the mascot. The number 6 turned out to encode everything: 6 questions, 6 domains, 6 seeker tiers.</p>
+        <div class="section-label">Structure</div>
+        <div class="org-tree">
+          <div class="org-row"><div class="org-label">Institute bridge</div><div class="org-val">I2EDC (Innovation, Incubation & Entrepreneurship Development Cell)</div><div class="org-sub">Routes approvals to the Institute Director</div></div>
+          <div class="org-row"><div class="org-label">Faculty layer</div><div class="org-val">Faculty advisors + I2EDC PIC</div><div class="org-sub">Guidance, budgeting, institutional liaison</div></div>
+          <div class="org-row"><div class="org-label">Core council</div><div class="org-val">4 members · equal vote · domain-led</div><div class="org-sub">Collective decisions, no single veto</div></div>
+          <div class="org-row"><div class="org-label">Student team</div><div class="org-val">~20 seekers who are also contributors</div><div class="org-sub">Operators and participants simultaneously</div></div>
+          <div class="org-row"><div class="org-label">Seeker pipeline</div><div class="org-val">Open entry · Tier 1 through 6</div><div class="org-sub">Internal and external seekers</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer>
+    <div class="footer-logo">BOSI<span>-6</span></div>
+    <div class="footer-text">IIT Jammu · Robotics Education Initiative · 2026–27</div>
+  </footer>
+</div>
+
+<!-- TRACKS -->
+<div class="page" id="page-tracks">
+  <div class="section">
+    <div class="section-label">Training + testing</div>
+    <div class="section-title">Three tracks.<br><em>Different lenses</em><br>on the same growth.</div>
+    <p class="section-body">Each track simultaneously trains and tests seekers. They are not separate career paths — they are different contexts in which the same underlying Robotic Knowledge Scale is developed and measured.</p>
+    <div class="track-layout">
+      <div class="track-card red">
+        <div class="track-card-label">Track 01</div>
+        <div class="track-card-title">BattleBot</div>
+        <div class="track-card-body">Classic combat robotics. Manually controlled competitive hardware. Three stages of scope — from a lightweight demo event open to all seekers, to a nationwide external competition.</div>
+        <div class="track-milestones">
+          <div class="milestone"><div class="milestone-dot red"></div><div><strong>Antweight Demo</strong> — sub-500g. Sept. Engagement event, all seekers.</div></div>
+          <div class="milestone"><div class="milestone-dot red"></div><div><strong>Featherweight Internal</strong> — Feb. BOSI-trained seekers + training camp attendees.</div></div>
+          <div class="milestone"><div class="milestone-dot red"></div><div><strong>Featherweight External</strong> — Apr. Open nationwide. Any college or university.</div></div>
+        </div>
+        <div class="card-tags" style="margin-top:20px"><span class="tag">M primary</span><span class="tag">E</span><span class="tag">seekers {1–6}</span></div>
+      </div>
+      <div class="track-card blue">
+        <div class="track-card-label">Track 02</div>
+        <div class="track-card-title">Drone + Aviation</div>
+        <div class="track-card-body">Three-level progressive knowledge system. Not rigidly structured — Level 3 seekers are encouraged to explore FPV racing, payload systems, or anything else that pushes the domain.</div>
+        <div class="track-milestones">
+          <div class="milestone"><div class="milestone-dot blue"></div><div><strong>Level 0→1</strong> — Structure + Introduction. Seekers {1,2,3}. Jan bootcamp (4 days).</div></div>
+          <div class="milestone"><div class="milestone-dot blue"></div><div><strong>Level 2</strong> — Autonomy + Waypoint Navigation. Seekers {2,3,4}. Pre-req for L3.</div></div>
+          <div class="milestone"><div class="milestone-dot blue"></div><div><strong>Level 3</strong> — End-to-end creation. Seekers {4,5,6}. Open creative exploration.</div></div>
+        </div>
+        <div class="card-tags" style="margin-top:20px"><span class="tag">M</span><span class="tag">E</span><span class="tag">C</span><span class="tag">most balanced</span></div>
+      </div>
+      <div class="track-card green">
+        <div class="track-card-label">Track 03</div>
+        <div class="track-card-title">LeMansar</div>
+        <div class="track-card-body">RC car endurance racing, inspired by Le Mans 24hr. Scaled to 24 minutes with challenge stages. Held in front of the Mansar building on campus. Backup venue OAT for rain.</div>
+        <div class="track-milestones">
+          <div class="milestone"><div class="milestone-dot green"></div><div><strong>Internal release</strong> — soft launch for BOSI seekers first.</div></div>
+          <div class="milestone"><div class="milestone-dot green"></div><div><strong>External release</strong> — October. Open to other colleges.</div></div>
+          <div class="milestone"><div class="milestone-dot green"></div><div><strong>Competition</strong> — 1st November 2026. 24-min endurance race.</div></div>
+        </div>
+        <div class="card-tags" style="margin-top:20px"><span class="tag">M dominant</span><span class="tag">CAD</span><span class="tag">endurance</span></div>
+      </div>
+      <div class="track-card amber">
+        <div class="track-card-label">Convergence</div>
+        <div class="track-card-title">The Triathlon</div>
+        <div class="track-card-body">The 48-hour annual makeathon. The Goblet. All three tracks feed into this. Selected seekers work for 48 hours with full tool and inventory access — testing all 6 domains simultaneously. Held every March.</div>
+        <div class="track-milestones">
+          <div class="milestone"><div class="milestone-dot amber"></div><div>10–12 seekers selected by tier threshold or direct invite.</div></div>
+          <div class="milestone"><div class="milestone-dot amber"></div><div>All 6 domains evaluated: M + E + C + T + D + S.</div></div>
+          <div class="milestone"><div class="milestone-dot amber"></div><div>Overall RKS assigned. Cycle resets. New cohort begins.</div></div>
+        </div>
+        <div class="card-tags" style="margin-top:20px"><span class="tag">annual</span><span class="tag">all 6 domains</span><span class="tag">March</span></div>
+      </div>
+    </div>
+  </div>
+  <footer>
+    <div class="footer-logo">BOSI<span>-6</span></div>
+    <div class="footer-text">IIT Jammu · Robotics Education Initiative · 2026–27</div>
+  </footer>
+</div>
+
+<!-- RKS -->
+<div class="page" id="page-rks">
+  <div class="section">
+    <div class="section-label">Evaluation system</div>
+    <div class="section-title">Robotic<br><em>Knowledge Scale.</em></div>
+    <p class="section-body">RKS is a single number — from 0 to 1 — that represents the area of a hexagon formed by a seeker's scores across 6 domains. It encodes a philosophy: breadth is not optional. Neglecting any domain shrinks adjacent areas simultaneously.</p>
+    <div class="rks-formula">
+      <strong>RKS</strong> = [ (M+1)(E+1) + (E+1)(C+1) + (C+1)(T+1) + (T+1)(D+1) + (D+1)(S+1) + (S+1)(M+1) ] / <strong>726</strong>
+    </div>
+    <p style="font-size:13px;color:var(--ink3);font-family:var(--mono)">Pen-and-paper form: add 1 to each score, multiply adjacent pairs in the hexagon cycle M→E→C→T→D→S→M, sum all 6, divide by 726.</p>
+    <div class="section-label" style="margin-top:48px">The 6 domains</div>
+    <div class="domain-grid">
+      <div class="domain-card"><div class="domain-letter">M</div><div class="domain-name">Mechanical</div><div class="domain-desc">CAD, design, fabrication. Core to BattleBot + LeMansar.</div><div class="domain-type core">core build</div></div>
+      <div class="domain-card"><div class="domain-letter">E</div><div class="domain-name">Electrical</div><div class="domain-desc">Arduino, electronics, circuit design. Spans all tracks.</div><div class="domain-type core">core build</div></div>
+      <div class="domain-card"><div class="domain-letter">C</div><div class="domain-name">Coding</div><div class="domain-desc">Firmware, programming. Critical for Drone Level 2+.</div><div class="domain-type core">core build</div></div>
+      <div class="domain-card"><div class="domain-letter">T</div><div class="domain-name">Tools</div><div class="domain-desc">Tinker Hub competency, workshop tool usage.</div><div class="domain-type support">support</div></div>
+      <div class="domain-card"><div class="domain-letter">D</div><div class="domain-name">Documentation</div><div class="domain-desc">Reports, build logs, event write-ups.</div><div class="domain-type support">support</div></div>
+      <div class="domain-card"><div class="domain-letter">S</div><div class="domain-name">Soft Skills</div><div class="domain-desc">Presentation, communication, social posting.</div><div class="domain-type support">support</div></div>
+    </div>
+    <div class="section-label" style="margin-top:48px">Seeker tiers — power law spacing (α = 1.2)</div>
+    <div class="tier-list">
+      <div class="tier-row"><div class="tier-num" style="background:#B5D4F4;color:#0C447C">1</div><div class="tier-info"><div class="tier-name">Curious</div><div class="tier-range">RKS 0.000 – 0.036</div></div><div class="tier-bar-outer"><div class="tier-bar-inner" style="width:3.6%;background:#B5D4F4"></div></div></div>
+      <div class="tier-row"><div class="tier-num" style="background:#C0DD97;color:#27500A">2</div><div class="tier-info"><div class="tier-name">Builder</div><div class="tier-range">RKS 0.036 – 0.119</div></div><div class="tier-bar-outer"><div class="tier-bar-inner" style="width:8.3%;background:#C0DD97"></div></div></div>
+      <div class="tier-row"><div class="tier-num" style="background:#FAC775;color:#633806">3</div><div class="tier-info"><div class="tier-name">Maker</div><div class="tier-range">RKS 0.119 – 0.253</div></div><div class="tier-bar-outer"><div class="tier-bar-inner" style="width:13.4%;background:#FAC775"></div></div></div>
+      <div class="tier-row"><div class="tier-num" style="background:#F5C4B3;color:#712B13">4</div><div class="tier-info"><div class="tier-name">Engineer</div><div class="tier-range">RKS 0.253 – 0.443</div></div><div class="tier-bar-outer"><div class="tier-bar-inner" style="width:19%;background:#F5C4B3"></div></div></div>
+      <div class="tier-row"><div class="tier-num" style="background:#CECBF6;color:#3C3489">5</div><div class="tier-info"><div class="tier-name">Innovator</div><div class="tier-range">RKS 0.443 – 0.691</div></div><div class="tier-bar-outer"><div class="tier-bar-inner" style="width:24.8%;background:#CECBF6"></div></div></div>
+      <div class="tier-row"><div class="tier-num" style="background:#444441;color:#E8E6DC">6</div><div class="tier-info"><div class="tier-name">Seeker</div><div class="tier-range">RKS 0.691 – 1.000</div></div><div class="tier-bar-outer"><div class="tier-bar-inner" style="width:30.9%;background:#444441"></div></div></div>
+    </div>
+    <p style="font-size:12px;color:var(--ink3);font-family:var(--mono);margin-top:12px">Tier widths follow a power law (α=1.2) — early tiers are narrow (fast progression), upper tiers are wide (diminishing returns, genuine expertise required).</p>
+  </div>
+  <footer>
+    <div class="footer-logo">BOSI<span>-6</span></div>
+    <div class="footer-text">IIT Jammu · Robotics Education Initiative · 2026–27</div>
+  </footer>
+</div>
+
+<!-- APPLY -->
+<div class="page" id="page-apply">
+  <div class="section">
+    <div class="section-label">Join the pipeline</div>
+    <div class="section-title">Become a<br><em>Seeker.</em></div>
+    <p class="section-body">BOSI-6 is open to any student willing to answer the six questions before acting. Entry is at Tier 1 regardless of prior experience. What matters is curiosity and commitment to building.</p>
+    <div class="apply-layout">
+      <div class="apply-form">
+        <div class="form-group">
+          <div class="form-label">Full name</div>
+          <input class="form-input" type="text" placeholder="Your name">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Institute / College</div>
+          <input class="form-input" type="text" placeholder="IIT Jammu / other">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Year of study</div>
+          <select class="form-select">
+            <option>1st year</option>
+            <option>2nd year</option>
+            <option>3rd year</option>
+            <option>4th year</option>
+            <option>Postgraduate</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Primary domain interest</div>
+          <select class="form-select">
+            <option>Mechanical (M)</option>
+            <option>Electrical (E)</option>
+            <option>Coding (C)</option>
+            <option>Not sure yet</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Track interest</div>
+          <select class="form-select">
+            <option>BattleBot</option>
+            <option>Drone + Aviation</option>
+            <option>LeMansar</option>
+            <option>All three</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Why do you want to be a Seeker?</div>
+          <textarea class="form-textarea" placeholder="Answer the Why question first."></textarea>
+        </div>
+        <button class="btn-primary" style="align-self:flex-start" onclick="alert('Applications open August 2026. We will contact you.')">Submit application</button>
+        <p class="form-note">Applications for the 2026–27 cohort open in August. Submitting now adds you to the early interest list.</p>
+      </div>
+      <div class="apply-info">
+        <div class="apply-info-card">
+          <div class="apply-info-title">Who can apply?</div>
+          <div class="apply-info-body">Any student — from IIT Jammu or any other institute. No prior robotics experience required. Entry is always at Tier 1. What matters is that you show up and answer the six questions.</div>
+        </div>
+        <div class="apply-info-card">
+          <div class="apply-info-title">What happens after you apply?</div>
+          <div class="apply-info-body">You'll be invited to an orientation in August where the pipeline, RKS system, and track structure are explained. From there you self-select into tracks and begin accumulating your RKS score.</div>
+        </div>
+        <div class="apply-info-card">
+          <div class="apply-info-title">What does the Triathlon require?</div>
+          <div class="apply-info-body">The 48-hour Triathlon in March selects 10–12 seekers who have reached a tier threshold through the year's events. Selection is by RKS standing or direct invite from the council. It is the hardest thing BOSI-6 does.</div>
+        </div>
+        <div class="apply-info-card">
+          <div class="apply-info-title">For faculty and institutes</div>
+          <div class="apply-info-body">BOSI-6 operates as a student society reinforced by faculty. We are seeking a faculty advisor and institutional recognition through I2EDC. Contact the council directly for the full proposal document.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer>
+    <div class="footer-logo">BOSI<span>-6</span></div>
+    <div class="footer-text">IIT Jammu · Robotics Education Initiative · 2026–27</div>
+  </footer>
 </div>
 
 <script>
-const GRAPH = {
-  root:{label:'BOSI-6',desc:'The central robotics knowledge pipeline. 6 domains, 6 tiers, 3 tracks, 1 Triathlon.',color:'#3C3489',text:'#CECBF6',children:['battlebot','drone','lemansar','rks','outreach','triathlon'],leaf:false,tags:['pipeline','5W1H','6-domains']},
-  battlebot:{label:'BattleBot',desc:'Combat robotics track. Manually controlled hardware. Antweight → Featherweight Internal → Featherweight External.',color:'#712B13',text:'#F5C4B3',children:['bb-what','bb-who','bb-where','bb-when','bb-why','bb-how'],leaf:false,tags:['M','E','track']},
-  drone:{label:'Drone + Aviation',desc:'Three-level flight track. FPV, autonomy, end-to-end creation at Level 3.',color:'#0C447C',text:'#B5D4F4',children:['dr-what','dr-who','dr-where','dr-when','dr-why','dr-how'],leaf:false,tags:['M','E','C','track']},
-  lemansar:{label:'LeMansar',desc:'24-min RC endurance race at Mansar building. Inspired by Le Mans 24hr format.',color:'#27500A',text:'#C0DD97',children:['lm-what','lm-who','lm-where','lm-when','lm-why','lm-how'],leaf:false,tags:['M','track']},
-  rks:{label:'RKS',desc:'Robotic Knowledge Scale. RKS = Σ(sᵢ+1)(sᵢ₊₁+1)/726. Hexagon area formula across 6 domains.',color:'#633806',text:'#FAC775',children:['rks-m','rks-e','rks-c','rks-t','rks-d','rks-s'],leaf:false,tags:['evaluation','formula','α=1.2']},
-  outreach:{label:'Outreach',desc:'Always-on parallel track. Social media, merch, documentation scoring, external seeker acquisition.',color:'#085041',text:'#9FE1CB',children:['out-what','out-who','out-where','out-when','out-why','out-how'],leaf:false,tags:['S','D','parallel']},
-  triathlon:{label:'Triathlon',desc:'48-hour annual makeathon. The Goblet. 10-12 seekers. All 6 domains evaluated simultaneously.',color:'#2C2C2A',text:'#D3D1C7',children:['tri-what','tri-who','tri-where','tri-when','tri-why','tri-how'],leaf:false,tags:['annual','M','E','C','T','D','S']},
-  'bb-what':{label:'What',desc:'Manually controlled combat robots. Antweight (<500g demo), Featherweight competitive builds.',color:'#4A1B0C',text:'#F0997B',children:[],leaf:true,tags:['battlebot','hardware'],domain:null},
-  'bb-who':{label:'Who',desc:'Primary seekers {1–6}. External: open nationwide for Featherweight External.',color:'#4A1B0C',text:'#F0997B',children:[],leaf:true,tags:['seekers'],domain:null},
-  'bb-where':{label:'Where',desc:'DAT — in front of E-Block football ground. Arena setup for competitions.',color:'#4A1B0C',text:'#F0997B',children:[],leaf:true,tags:['venue'],domain:null},
-  'bb-when':{label:'When',desc:'Antweight: Sept. Featherweight Internal: Feb. Featherweight External: April.',color:'#4A1B0C',text:'#F0997B',children:[],leaf:true,tags:['timeline'],domain:null},
-  'bb-why':{label:'Why',desc:'RKS evaluator — primarily M+E. Develop mechanical and electrical build competency under competitive pressure.',color:'#4A1B0C',text:'#F0997B',children:[],leaf:true,tags:['RKS','M','E'],domain:'M'},
-  'bb-how':{label:'How',desc:'Build log, component selection, arena performance scored. Documentation submitted post-event.',color:'#4A1B0C',text:'#F0997B',children:[],leaf:true,tags:['process'],domain:null},
-  'dr-what':{label:'What',desc:'FPV drones, autonomous flight, waypoint navigation, custom aviation projects at Level 3.',color:'#042C53',text:'#85B7EB',children:[],leaf:true,tags:['drone'],domain:null},
-  'dr-who':{label:'Who',desc:'L0→1: seekers {1,2,3}. L2: {2,3,4}. L3: {4,5,6}. Venue: Student Innovation Centre.',color:'#042C53',text:'#85B7EB',children:[],leaf:true,tags:['seekers'],domain:null},
-  'dr-where':{label:'Where',desc:'Student Innovation Centre for theory. Open sky / campus grounds for flight testing.',color:'#042C53',text:'#85B7EB',children:[],leaf:true,tags:['venue'],domain:null},
-  'dr-when':{label:'When',desc:'Bootcamp: 1st week January (4 days). Drone Swarm Demo: February. Level 3 ongoing.',color:'#042C53',text:'#85B7EB',children:[],leaf:true,tags:['timeline'],domain:null},
-  'dr-why':{label:'Why',desc:'RKS evaluator — M+E+C. Most balanced track across all 3 core domains. Level 3 enables true creation.',color:'#042C53',text:'#85B7EB',children:[],leaf:true,tags:['RKS','M','E','C'],domain:'C'},
-  'dr-how':{label:'How',desc:'Level-wise curriculum. Level 3 open to creative exploration — no rigid structure imposed.',color:'#042C53',text:'#85B7EB',children:[],leaf:true,tags:['process'],domain:null},
-  'lm-what':{label:'What',desc:'RC car 24-minute endurance race + challenge stages. Scaled from Le Mans 24hr concept.',color:'#173404',text:'#97C459',children:[],leaf:true,tags:['lemansar'],domain:null},
-  'lm-who':{label:'Who',desc:'Primary seekers {1–6}. Internal release first, external college open competition.',color:'#173404',text:'#97C459',children:[],leaf:true,tags:['seekers'],domain:null},
-  'lm-where':{label:'Where',desc:'In front of Mansar building on campus. Backup venue: OAT in case of rain.',color:'#173404',text:'#97C459',children:[],leaf:true,tags:['venue'],domain:null},
-  'lm-when':{label:'When',desc:'1st November 2026. External release October. Merchandise release September.',color:'#173404',text:'#97C459',children:[],leaf:true,tags:['timeline'],domain:null},
-  'lm-why':{label:'Why',desc:'RKS evaluator — primarily M. CAD, chassis design, endurance engineering tested under race conditions.',color:'#173404',text:'#97C459',children:[],leaf:true,tags:['RKS','M'],domain:'M'},
-  'lm-how':{label:'How',desc:'24-min race format. Challenge stage format TBD. Documentation and S scored post-event.',color:'#173404',text:'#97C459',children:[],leaf:true,tags:['process'],domain:null},
-  'rks-m':{label:'M — Mechanical',desc:'CAD, design, fabrication. Core domain. Axis 1 of RKS hexagon. Primary for BattleBot + LeMansar.',color:'#412402',text:'#EF9F27',children:[],leaf:true,tags:['core','domain'],domain:'M'},
-  'rks-e':{label:'E — Electrical',desc:'Arduino, electronics, circuit design. Core domain. Axis 2. Spans all three tracks.',color:'#412402',text:'#EF9F27',children:[],leaf:true,tags:['core','domain'],domain:'E'},
-  'rks-c':{label:'C — Coding',desc:'Tinkercad, firmware, programming. Core domain. Axis 3. Critical for Drone Level 2+.',color:'#412402',text:'#EF9F27',children:[],leaf:true,tags:['core','domain'],domain:'C'},
-  'rks-t':{label:'T — Tools',desc:'Tinker Hub, workshop competency, tool usage. Support domain. Axis 4.',color:'#412402',text:'#EF9F27',children:[],leaf:true,tags:['support','domain'],domain:'T'},
-  'rks-d':{label:'D — Docs',desc:'Reports, write-ups, event records, build logs. Support domain. Axis 5. Scored per event.',color:'#412402',text:'#EF9F27',children:[],leaf:true,tags:['support','domain'],domain:'D'},
-  'rks-s':{label:'S — Soft Skills',desc:'Presentation, social media posting, communication. Support domain. Axis 6.',color:'#412402',text:'#EF9F27',children:[],leaf:true,tags:['support','domain'],domain:'S'},
-  'out-what':{label:'What',desc:'Social handles, merchandise, event documentation posts, external competition promotion.',color:'#04342C',text:'#5DCAA5',children:[],leaf:true,tags:['outreach'],domain:null},
-  'out-who':{label:'Who',desc:'Outreach lead owns it. All seekers participate — earn S+D RKS points for posting.',color:'#04342C',text:'#5DCAA5',children:[],leaf:true,tags:['seekers'],domain:null},
-  'out-where':{label:'Where',desc:'All social platforms, campus events, external competition circuits.',color:'#04342C',text:'#5DCAA5',children:[],leaf:true,tags:['platform'],domain:null},
-  'out-when':{label:'When',desc:'Always on. Intensifies at every milestone. Merch launch: October.',color:'#04342C',text:'#5DCAA5',children:[],leaf:true,tags:['timeline'],domain:null},
-  'out-why':{label:'Why',desc:'Symbiotic with pipeline — outreach gives BOSI-6 visibility; pipeline gives outreach its content.',color:'#04342C',text:'#5DCAA5',children:[],leaf:true,tags:['strategy'],domain:null},
-  'out-how':{label:'How',desc:'Seekers post builds and presentations. Outreach lead amplifies and engages external seekers.',color:'#04342C',text:'#5DCAA5',children:[],leaf:true,tags:['process'],domain:null},
-  'tri-what':{label:'What',desc:'48-hour makeathon. Full Tinker Hub + inventory access. All 6 domains tested simultaneously.',color:'#161614',text:'#B4B2A9',children:[],leaf:true,tags:['triathlon'],domain:null},
-  'tri-who':{label:'Who',desc:'10–12 seekers selected by tier threshold (invite or interview). Internal only.',color:'#161614',text:'#B4B2A9',children:[],leaf:true,tags:['seekers'],domain:null},
-  'tri-where':{label:'Where',desc:'Campus workshop with full tool access. Exact venue TBD — requires Director approval.',color:'#161614',text:'#B4B2A9',children:[],leaf:true,tags:['venue'],domain:null},
-  'tri-when':{label:'When',desc:'Every March. Annual. The Goblet. Cycle resets immediately after.',color:'#161614',text:'#B4B2A9',children:[],leaf:true,tags:['annual'],domain:null},
-  'tri-why':{label:'Why',desc:'Overall RKS evaluator. Tests breadth and depth simultaneously — the only event that does.',color:'#161614',text:'#B4B2A9',children:[],leaf:true,tags:['RKS','evaluation'],domain:null},
-  'tri-how':{label:'How',desc:'48hr build sprint. Panel evaluates M+E+C+T+D+S. Format details TBD by council.',color:'#161614',text:'#B4B2A9',children:[],leaf:true,tags:['process'],domain:null},
-};
-
-const SCORES = {};
-const MARKS = {};
-const MERGES = [];
-let mode = 'magnify';
-let currentNode = 'root';
-let navStack = [];
-let panX=0, panY=0;
-let isPanning=false, panStart={x:0,y:0};
-let hovered=null, animating=false;
-let mergeFirst=null;
-let selectedNode=null;
-let infoVisible=true;
-
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-
-function resize(){
-  const wrap = document.getElementById('canvas-wrap');
-  const r = wrap.getBoundingClientRect();
-  canvas.width = r.width * devicePixelRatio;
-  canvas.height = r.height * devicePixelRatio;
-  canvas.style.width = r.width+'px';
-  canvas.style.height = r.height+'px';
-  ctx.scale(devicePixelRatio,devicePixelRatio);
-  draw();
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.getElementById('nav-' + id)?.classList.add('active');
+  window.scrollTo(0, 0);
+  return false;
 }
-
-function W(){ return parseInt(canvas.style.width)||canvas.width; }
-function H(){ return parseInt(canvas.style.height)||canvas.height; }
-
-function layout(){
-  const w=W(),h=H();
-  const cx=w/2+panX, cy=h/2+panY;
-  const R=Math.min(w,h)*0.17;
-  const gap=R*2.05;
-  const angles=[90,30,-30,-90,-150,150].map(a=>a*Math.PI/180);
-  const positions=angles.map(a=>({x:cx+gap*Math.cos(a),y:cy+gap*Math.sin(a)}));
-  return{cx,cy,R,positions};
-}
-
-function ptHex(cx,cy,r){
-  const pts=[];
-  for(let i=0;i<6;i++){
-    const a=(30+60*i)*Math.PI/180;
-    pts.push([cx+r*Math.cos(a),cy+r*Math.sin(a)]);
-  }
-  return pts;
-}
-
-function drawHexPath(cx,cy,r){
-  const p=ptHex(cx,cy,r);
-  ctx.beginPath();
-  p.forEach((pt,i)=>i===0?ctx.moveTo(pt[0],pt[1]):ctx.lineTo(pt[0],pt[1]));
-  ctx.closePath();
-}
-
-function hexContains(cx,cy,r,mx,my){
-  return Math.sqrt((mx-cx)**2+(my-cy)**2)<r*1.05;
-}
-
-function wrapLabel(text,cx,cy,maxW,color,size,weight=400){
-  ctx.save();
-  ctx.fillStyle=color;
-  ctx.font=`${weight} ${size}px 'DM Sans', sans-serif`;
-  ctx.textAlign='center';
-  ctx.textBaseline='middle';
-  const words=text.split(' ');
-  const lines=[];let cur='';
-  words.forEach(w=>{
-    const t=cur?cur+' '+w:w;
-    if(ctx.measureText(t).width<maxW){cur=t;}
-    else{if(cur)lines.push(cur);cur=w;}
-  });
-  lines.push(cur);
-  const lh=size*1.3;
-  const startY=cy-(lines.length-1)*lh/2;
-  lines.forEach((l,i)=>ctx.fillText(l,cx,startY+i*lh));
-  ctx.restore();
-}
-
-function draw(){
-  const w=W(),h=H();
-  ctx.clearRect(0,0,w,h);
-
-  // Subtle grid
-  ctx.save();
-  ctx.strokeStyle='rgba(255,255,255,0.03)';
-  ctx.lineWidth=0.5;
-  const gs=40;
-  for(let x=0;x<w;x+=gs){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
-  for(let y=0;y<h;y+=gs){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
-  ctx.restore();
-
-  const node=GRAPH[currentNode];
-  const {cx,cy,R,positions}=layout();
-  const children=node.children||[];
-
-  // Draw merge links
-  MERGES.forEach(([a,b])=>{
-    const ai=children.indexOf(a),bi=children.indexOf(b);
-    if(ai<0||bi<0)return;
-    const pa=positions[ai],pb=positions[bi];
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(pa.x,pa.y);
-    ctx.lineTo(pb.x,pb.y);
-    ctx.strokeStyle='rgba(239,159,39,0.5)';
-    ctx.lineWidth=1.5;
-    ctx.setLineDash([5,4]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.restore();
-  });
-
-  // Connector lines from center to children
-  children.forEach((_,i)=>{
-    const {x,y}=positions[i];
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(cx,cy);ctx.lineTo(x,y);
-    ctx.strokeStyle='rgba(255,255,255,0.04)';
-    ctx.lineWidth=1;ctx.stroke();
-    ctx.restore();
-  });
-
-  // Center hex
-  const cR=R*0.5;
-  drawHexPath(cx,cy,cR);
-  ctx.fillStyle=node.color;ctx.fill();
-  ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1;ctx.stroke();
-  wrapLabel(node.label,cx,cy,cR*1.6,node.text,12,500);
-
-  // Child hexes
-  children.forEach((cid,i)=>{
-    const ch=GRAPH[cid];if(!ch)return;
-    const {x,y}=positions[i];
-    const isHov=hovered===cid;
-    const isSel=selectedNode===cid;
-    const isMark=MARKS[cid];
-    const isMergeFirst=mergeFirst===cid;
-    const r=isHov?R*1.04:R;
-    const hasScore=SCORES[cid]!==undefined;
-
-    drawHexPath(x,y,r);
-    ctx.fillStyle=ch.color;ctx.fill();
-
-    // Border
-    ctx.strokeStyle=isMergeFirst?'#EF9F27':isSel?'rgba(255,255,255,0.4)':isHov?'rgba(255,255,255,0.25)':'rgba(255,255,255,0.1)';
-    ctx.lineWidth=isMergeFirst||isSel?2:1;
-    ctx.stroke();
-
-    // Score glow
-    if(hasScore){
-      ctx.save();
-      drawHexPath(x,y,r+4);
-      ctx.strokeStyle='rgba(239,159,39,0.3)';
-      ctx.lineWidth=2;ctx.stroke();
-      ctx.restore();
-    }
-
-    // Mark dot
-    if(isMark){
-      ctx.save();
-      ctx.beginPath();ctx.arc(x+R*0.52,y-R*0.52,5,0,Math.PI*2);
-      ctx.fillStyle='#EF9F27';ctx.fill();ctx.restore();
-    }
-
-    // Leaf indicator
-    if(ch.leaf){
-      ctx.save();
-      ctx.beginPath();ctx.arc(x+R*0.52,y+R*0.52,3.5,0,Math.PI*2);
-      ctx.fillStyle='rgba(255,255,255,0.2)';ctx.fill();ctx.restore();
-    }
-
-    // Has children indicator
-    if(!ch.leaf&&ch.children&&ch.children.length){
-      ctx.save();
-      for(let d=0;d<3;d++){
-        const da=(30+d*60)*Math.PI/180;
-        ctx.beginPath();ctx.arc(x+R*0.48*Math.cos(da),y+R*0.48*Math.sin(da),2,0,Math.PI*2);
-        ctx.fillStyle='rgba(255,255,255,0.25)';ctx.fill();
-      }
-      ctx.restore();
-    }
-
-    wrapLabel(ch.label,x,y,R*1.4,ch.text,11,500);
-  });
-}
-
-function getChild(mx,my){
-  const node=GRAPH[currentNode];
-  const {positions,R}=layout();
-  for(let i=0;i<node.children.length;i++){
-    const {x,y}=positions[i];
-    if(hexContains(x,y,R,mx,my))return node.children[i];
-  }
-  return null;
-}
-
-function setMode(m){
-  mode=m;mergeFirst=null;
-  document.querySelectorAll('.t-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('tbtn-'+m)?.classList.add('active');
-  const hints={
-    magnify:'Magnify — click a hexagon to zoom in',
-    move:'Move — drag to pan the canvas',
-    modify:'Modify — click a hexagon to edit its content',
-    mark:'Mark — click to flag a hexagon as a milestone',
-    merge:'Merge — click two hexagons to connect them',
-    score:'Score — click a leaf node to enter its domain score',
-  };
-  document.getElementById('mode-hint').textContent=hints[m]||'';
-  updateMergePanel();
-  draw();
-}
-
-function magnifyInto(id){
-  if(animating)return;
-  const ch=GRAPH[id];
-  if(!ch||ch.leaf){selectNode(id);return;}
-  animating=true;
-  const {positions,R}=layout();
-  const idx=GRAPH[currentNode].children.indexOf(id);
-  const {x,y}=positions[idx];
-  const w=W(),h=H();
-  const targetX=w/2-x+panX,targetY=h/2-y+panY;
-  let t=0;
-  const startPX=panX,startPY=panY;
-  function step(){
-    t+=0.07;
-    const e=t<1?1-Math.pow(1-t,3):1;
-    panX=startPX+(targetX-startPX)*e;
-    panY=startPY+(targetY-startPY)*e;
-    draw();
-    if(t<1){requestAnimationFrame(step);}
-    else{
-      navStack.push(currentNode);
-      currentNode=id;panX=0;panY=0;
-      updateBreadcrumb();selectNode(id);
-      animating=false;draw();
-    }
-  }
-  requestAnimationFrame(step);
-}
-
-function selectNode(id){
-  selectedNode=id;
-  const ch=GRAPH[id];if(!ch)return;
-  document.getElementById('ip-title').textContent=ch.label;
-  document.getElementById('ip-desc').textContent=ch.desc;
-  const tags=ch.tags||[];
-  document.getElementById('ip-tags').innerHTML=tags.map(t=>`<span class="tag">${t}</span>`).join('');
-  const chCount=ch.children?ch.children.length:0;
-  document.getElementById('ip-children').textContent=ch.leaf?'Leaf node (no children)':`${chCount} child nodes`;
-
-  // Score input for score mode or leaf nodes with domain
-  const rksWrap=document.getElementById('ip-rks-wrap');
-  if(mode==='score'&&ch.domain){
-    rksWrap.style.display='block';
-    document.getElementById('ip-score').value=SCORES[id]!==undefined?SCORES[id]:'';
-  } else { rksWrap.style.display='none'; }
-
-  // RKS mini bars for RKS node
-  const domains=['M','E','C','T','D','S'];
-  const mini=document.getElementById('ip-rks-mini');
-  mini.innerHTML=domains.map(d=>{
-    const score=Object.entries(SCORES).find(([k])=>GRAPH[k]&&GRAPH[k].domain===d)?.[1]||0;
-    return `<div class="rks-domain">
-      <span class="rks-d-label">${d}</span>
-      <div class="rks-d-track"><div class="rks-d-fill" style="width:${score*10}%"></div></div>
-      <span class="rks-d-val">${score||'—'}</span>
-    </div>`;
-  }).join('');
-  draw();
-}
-
-function saveScore(){
-  if(!selectedNode)return;
-  const v=parseFloat(document.getElementById('ip-score').value);
-  if(!isNaN(v)&&v>=0&&v<=10){ SCORES[selectedNode]=Math.min(10,Math.max(0,v)); }
-  selectNode(selectedNode);draw();
-}
-
-function updateBreadcrumb(){
-  const all=[...navStack,currentNode];
-  const bc=document.getElementById('breadcrumb');
-  bc.innerHTML=all.map((id,i)=>{
-    const n=GRAPH[id];
-    const cur=i===all.length-1;
-    return `<span class="bc${cur?' active':''}" onclick="jumpTo(${i})">${n?n.label:id}</span>${cur?'':'<span class="bc-sep">›</span>'}`;
-  }).join('');
-}
-
-function jumpTo(idx){
-  const all=[...navStack,currentNode];
-  currentNode=all[idx];
-  navStack=all.slice(0,idx);
-  panX=0;panY=0;
-  updateBreadcrumb();selectNode(currentNode);draw();
-}
-
-function goUp(){
-  if(!navStack.length)return;
-  currentNode=navStack.pop();
-  panX=0;panY=0;
-  updateBreadcrumb();selectNode(currentNode);draw();
-}
-
-function resetView(){ panX=0;panY=0;draw(); }
-
-function toggleInfo(){
-  infoVisible=!infoVisible;
-  document.getElementById('info').style.display=infoVisible?'flex':'none';
-  setTimeout(resize,10);
-}
-
-function updateMergePanel(){
-  const w=document.getElementById('ip-merge-wrap');
-  const msg=document.getElementById('ip-merge-msg');
-  if(mode==='merge'){
-    w.style.display='block';
-    msg.textContent=mergeFirst?`Now click second node to connect to "${GRAPH[mergeFirst]?.label}"...`:'Click first node to start merge';
-  } else { w.style.display='none'; }
-}
-
-canvas.addEventListener('mousemove',e=>{
-  const r=canvas.getBoundingClientRect();
-  const mx=e.clientX-r.left,my=e.clientY-r.top;
-  if(isPanning&&mode==='move'){
-    panX+=e.clientX-panStart.x;panY+=e.clientY-panStart.y;
-    panStart={x:e.clientX,y:e.clientY};draw();return;
-  }
-  const h=getChild(mx,my);
-  if(h!==hovered){hovered=h;draw();}
-  canvas.style.cursor=h?'pointer':mode==='move'?'grab':'default';
-});
-
-canvas.addEventListener('mousedown',e=>{
-  if(mode==='move'){isPanning=true;panStart={x:e.clientX,y:e.clientY};}
-});
-canvas.addEventListener('mouseup',()=>{isPanning=false;});
-canvas.addEventListener('mouseleave',()=>{isPanning=false;hovered=null;draw();});
-
-canvas.addEventListener('click',e=>{
-  const r=canvas.getBoundingClientRect();
-  const mx=e.clientX-r.left,my=e.clientY-r.top;
-  const h=getChild(mx,my);if(!h)return;
-  if(mode==='magnify'){magnifyInto(h);}
-  else if(mode==='mark'){MARKS[h]=!MARKS[h];selectNode(h);draw();}
-  else if(mode==='merge'){
-    if(!mergeFirst){mergeFirst=h;updateMergePanel();draw();}
-    else if(mergeFirst!==h){MERGES.push([mergeFirst,h]);mergeFirst=null;updateMergePanel();draw();}
-  }
-  else if(mode==='modify'){
-    const ch=GRAPH[h];
-    const nl=prompt(`Label:`,ch.label);if(nl?.trim())ch.label=nl.trim();
-    const nd=prompt(`Description:`,ch.desc);if(nd?.trim())ch.desc=nd.trim();
-    selectNode(h);draw();
-  }
-  else if(mode==='score'){selectNode(h);}
-  else{selectNode(h);}
-});
-
-canvas.addEventListener('wheel',e=>{
-  e.preventDefault();
-  panX-=e.deltaX*0.5;panY-=e.deltaY*0.5;draw();
-},{passive:false});
-
-updateBreadcrumb();
-selectNode('root');
-new ResizeObserver(resize).observe(document.getElementById('canvas-wrap'));
-window.addEventListener('resize',resize);
-resize();
+document.querySelectorAll('a[href="#"]').forEach(a => a.addEventListener('click', e => e.preventDefault()));
 </script>
 </body>
 </html>
