@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HexOS — BOSI-6 Knowledge Navigator</title>
+<style>
+  :root {
+    --bg: #0d0d0b;
+    --bg2: #161614;
+    --bg3: #1e1e1b;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #e8e6dc;
+    --text2: #9e9b90;
+    --text3: #5c5a54;
+    --amber: #EF9F27;
+    --amber-dim: rgba(239,159,39,0.2);
+    --font: 'DM Sans', system-ui, sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); }
+
+  #app { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+
+  /* Top bar */
+  #topbar {
+    height: 48px; min-height: 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px;
+    border-bottom: 0.5px solid var(--border);
+    background: var(--bg2);
+    z-index: 20;
+    gap: 12px;
+  }
+  #topbar-left { display: flex; align-items: center; gap: 10px; }
+  .logo { font-size: 15px; font-weight: 500; color: var(--text); letter-spacing: -0.02em; }
+  .logo span { color: var(--amber); }
+  .version { font-size: 11px; color: var(--text3); font-family: var(--mono); border: 0.5px solid var(--border2); padding: 2px 7px; border-radius: 4px; }
+  #breadcrumb { display: flex; align-items: center; gap: 4px; flex: 1; overflow-x: auto; scrollbar-width: none; }
+  #breadcrumb::-webkit-scrollbar { display: none; }
+  .bc { font-size: 12px; color: var(--text2); cursor: pointer; padding: 3px 8px; border-radius: 4px; white-space: nowrap; transition: all .15s; }
+  .bc:hover { background: var(--bg3); color: var(--text); }
+  .bc.active { color: var(--text); font-weight: 500; }
+  .bc-sep { font-size: 12px; color: var(--text3); }
+  #topbar-right { display: flex; align-items: center; gap: 6px; }
+  .top-btn { font-size: 12px; padding: 4px 10px; border-radius: 4px; border: 0.5px solid var(--border2); background: transparent; color: var(--text2); cursor: pointer; font-family: var(--font); transition: all .15s; white-space: nowrap; }
+  .top-btn:hover { background: var(--bg3); color: var(--text); }
+
+  /* Main area */
+  #main { flex: 1; display: flex; overflow: hidden; }
+
+  /* Canvas */
+  #canvas-wrap { flex: 1; position: relative; }
+  #canvas { width: 100%; height: 100%; cursor: default; }
+
+  /* Toolbar */
+  #toolbar {
+    position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 4px;
+    background: var(--bg2); border: 0.5px solid var(--border2);
+    border-radius: 8px; padding: 6px;
+    z-index: 10;
+  }
+  .t-btn {
+    width: 36px; height: 36px; border-radius: 6px;
+    border: 0.5px solid transparent;
+    background: transparent; color: var(--text2);
+    cursor: pointer; font-size: 13px; font-family: var(--font);
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s; position: relative;
+  }
+  .t-btn:hover { background: var(--bg3); color: var(--text); }
+  .t-btn.active { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); }
+  .t-btn[title]:hover::after {
+    content: attr(title);
+    position: absolute; left: 44px; top: 50%; transform: translateY(-50%);
+    background: var(--bg2); border: 0.5px solid var(--border2);
+    color: var(--text); font-size: 11px; padding: 4px 8px; border-radius: 4px;
+    white-space: nowrap; pointer-events: none; z-index: 100;
+  }
+  .t-sep { height: 0.5px; background: var(--border); margin: 2px 0; }
+
+  /* Info panel */
+  #info {
+    width: 220px; min-width: 220px;
+    border-left: 0.5px solid var(--border);
+    background: var(--bg2);
+    padding: 16px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .info-label { font-size: 10px; font-weight: 500; color: var(--text3); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
+  .info-val { font-size: 13px; color: var(--text); line-height: 1.5; }
+  .info-title { font-size: 15px; font-weight: 500; color: var(--text); }
+  .tag { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 3px; border: 0.5px solid var(--border2); color: var(--text2); margin: 2px 2px 0 0; font-family: var(--mono); }
+  .rks-mini { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+  .rks-domain { display: flex; align-items: center; gap: 6px; }
+  .rks-d-label { font-size: 11px; font-family: var(--mono); color: var(--text2); width: 14px; }
+  .rks-d-track { flex: 1; height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+  .rks-d-fill { height: 100%; background: var(--amber); border-radius: 2px; transition: width .4s; }
+  .rks-d-val { font-size: 10px; font-family: var(--mono); color: var(--text3); min-width: 20px; text-align: right; }
+  .score-input { width: 100%; background: var(--bg3); border: 0.5px solid var(--border2); border-radius: 4px; color: var(--text); font-family: var(--font); font-size: 13px; padding: 6px 8px; margin-top: 4px; }
+  .score-input:focus { outline: none; border-color: var(--amber); }
+  .info-btn { width: 100%; padding: 6px; background: transparent; border: 0.5px solid var(--border2); border-radius: 4px; color: var(--text2); font-family: var(--font); font-size: 12px; cursor: pointer; transition: all .15s; }
+  .info-btn:hover { background: var(--bg3); color: var(--text); }
+  .merge-indicator { font-size: 11px; color: var(--amber); padding: 6px 8px; background: var(--amber-dim); border-radius: 4px; text-align: center; }
+
+  /* Mode hint */
+  #mode-hint {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; color: var(--text3); background: var(--bg2);
+    border: 0.5px solid var(--border); padding: 4px 12px; border-radius: 20px;
+    white-space: nowrap; pointer-events: none; z-index: 10;
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <div id="topbar-left">
+      <div class="logo">Hex<span>OS</span></div>
+      <div class="version">v1.0 · BOSI-6</div>
+      <div style="width:0.5px;height:20px;background:var(--border)"></div>
+      <div id="breadcrumb"></div>
+    </div>
+    <div id="topbar-right">
+      <button class="top-btn" onclick="goUp()">↑ Up</button>
+      <button class="top-btn" onclick="toggleInfo()">Panel</button>
+      <button class="top-btn" onclick="resetView()">Reset</button>
+    </div>
+  </div>
+  <div id="main">
+    <div id="canvas-wrap">
+      <canvas id="canvas"></canvas>
+      <div id="toolbar">
+        <button class="t-btn active" id="tbtn-magnify" onclick="setMode('magnify')" title="Magnify — zoom in">⊕</button>
+        <button class="t-btn" id="tbtn-move" onclick="setMode('move')" title="Move — pan canvas">✥</button>
+        <div class="t-sep"></div>
+        <button class="t-btn" id="tbtn-modify" onclick="setMode('modify')" title="Modify — edit content">✎</button>
+        <button class="t-btn" id="tbtn-mark" onclick="setMode('mark')" title="Mark — flag milestone">◆</button>
+        <div class="t-sep"></div>
+        <button class="t-btn" id="tbtn-merge" onclick="setMode('merge')" title="Merge — connect nodes">⌁</button>
+        <button class="t-btn" id="tbtn-score" onclick="setMode('score')" title="Score — enter RKS scores">◎</button>
+      </div>
+      <div id="mode-hint">Magnify — click a hexagon to zoom in</div>
+    </div>
+    <div id="info">
+      <div>
+        <div class="info-label">Selected node</div>
+        <div class="info-title" id="ip-title">BOSI-6</div>
+      </div>
+      <div>
+        <div class="info-label">Description</div>
+        <div class="info-val" id="ip-desc">The central robotics knowledge pipeline.</div>
+      </div>
+      <div id="ip-tags-wrap">
+        <div class="info-label">Tags</div>
+        <div id="ip-tags"></div>
+      </div>
+      <div id="ip-rks-wrap" style="display:none">
+        <div class="info-label">Domain score (0–10)</div>
+        <input class="score-input" type="number" id="ip-score" min="0" max="10" step="0.5" placeholder="Enter score..." oninput="saveScore()">
+      </div>
+      <div id="ip-children-wrap">
+        <div class="info-label">Children</div>
+        <div class="info-val" id="ip-children" style="color:var(--text3)">—</div>
+      </div>
+      <div id="ip-merge-wrap" style="display:none">
+        <div class="merge-indicator" id="ip-merge-msg">Select first node to merge</div>
+      </div>
+      <div>
+        <div class="info-label">RKS scores stored</div>
+        <div class="rks-mini" id="ip-rks-mini"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const GRAPH = {
+  root:{label:'BOSI-6',desc:'The central robotics knowledge pipeline. 6 domains, 6 tiers, 3 tracks, 1 Triathlon.',color:'#3C3489',text:'#CECBF6',children:['battlebot','drone','lemansar','rks','outreach','triathlon'],leaf:false,tags:['pipeline','5W1H','6-domains']},
+  battlebot:{label:'BattleBot',desc:'Combat robotics track. Manually controlled hardware. Antweight → Featherweight Internal → Featherweight External.',color:'#712B13',text:'#F5C4B3',children:['bb-what','bb-who','bb-where','bb-when','bb-why','bb-how'],leaf:false,tags:['M','E','track']},
+  drone:{label:'Drone + Aviation',desc:'Three-level flight track. FPV, autonomy, end-to-end creation at Level 3.',color:'#0C447C',text:'#B5D4F4',children:['dr-what','dr-who','dr-where','dr-when','dr-why','dr-how'],leaf:false,tags:['M','E','C','track']},
+  lemansar:{label:'LeMansar',desc:'24-min RC endurance race at Mansar building. Inspired by Le Mans 24hr format.',color:'#27500A',text:'#C0DD97',children:['lm-what','lm-who','lm-where','lm-when','lm-why','lm-how'],leaf:false,tags:['M','track']},
+  rks:{label:'RKS',desc:'Robotic Knowledge Scale. RKS = Σ(sᵢ+1)(sᵢ₊₁+1)/726. Hexagon area formula across 6 domains.',color:'#633806',text:'#FAC775',children:['rks-m','rks-e','rks-c','rks-t','rks-d','rks-s'],leaf:false,tags:['evaluation','formula','α=1.2']},
+  outreach:{label:'Outreach',desc:'Always-on parallel track. Social media, merch, documentation scoring, external seeker acquisition.',color:'#085041',text:'#9FE1CB',children:['out-what','out-who','out-where','out-when','out-why','out-how'],leaf:false,tags:['S','D','parallel']},
+  triathlon:{label:'Triathlon',desc:'48-hour annual makeathon. The Goblet. 10-12 seekers. All 6 domains evaluated simultaneously.',color:'#2C2C2A',text:'#D3D1C7',children:['tri-what','tri-who','tri-where','tri-when','tri-why','tri-how'],leaf:false,tags:['annual','M','E','C','T','D','S']},
+  'bb-what':{label:'What',desc:'Manually controlled combat robots. Antweight (<500g demo), Featherweight competitive builds.',color:'#4A1B0C',text:'#F0997B',children:[],leaf:true,tags:['battlebot','hardware'],domain:null},
+  'bb-who':{label:'Who',desc:'Primary seekers {1–6}. External: open nationwide for Featherweight External.',color:'#4A1B0C',text:'#F0997B',children:[],leaf:true,tags:['seekers'],domain:null},
+  'bb-where':{label:'Where',desc:'DAT — in front of E-Block football ground. Arena setup for competitions.',color:'#4A1B0C',text:'#F0997B',children:[],leaf:true,tags:['venue'],domain:null},
+  'bb-when':{label:'When',desc:'Antweight: Sept. Featherweight Internal: Feb. Featherweight External: April.',color:'#4A1B0C',text:'#F0997B',children:[],leaf:true,tags:['timeline'],domain:null},
+  'bb-why':{label:'Why',desc:'RKS evaluator — primarily M+E. Develop mechanical and electrical build competency under competitive pressure.',color:'#4A1B0C',text:'#F0997B',children:[],leaf:true,tags:['RKS','M','E'],domain:'M'},
+  'bb-how':{label:'How',desc:'Build log, component selection, arena performance scored. Documentation submitted post-event.',color:'#4A1B0C',text:'#F0997B',children:[],leaf:true,tags:['process'],domain:null},
+  'dr-what':{label:'What',desc:'FPV drones, autonomous flight, waypoint navigation, custom aviation projects at Level 3.',color:'#042C53',text:'#85B7EB',children:[],leaf:true,tags:['drone'],domain:null},
+  'dr-who':{label:'Who',desc:'L0→1: seekers {1,2,3}. L2: {2,3,4}. L3: {4,5,6}. Venue: Student Innovation Centre.',color:'#042C53',text:'#85B7EB',children:[],leaf:true,tags:['seekers'],domain:null},
+  'dr-where':{label:'Where',desc:'Student Innovation Centre for theory. Open sky / campus grounds for flight testing.',color:'#042C53',text:'#85B7EB',children:[],leaf:true,tags:['venue'],domain:null},
+  'dr-when':{label:'When',desc:'Bootcamp: 1st week January (4 days). Drone Swarm Demo: February. Level 3 ongoing.',color:'#042C53',text:'#85B7EB',children:[],leaf:true,tags:['timeline'],domain:null},
+  'dr-why':{label:'Why',desc:'RKS evaluator — M+E+C. Most balanced track across all 3 core domains. Level 3 enables true creation.',color:'#042C53',text:'#85B7EB',children:[],leaf:true,tags:['RKS','M','E','C'],domain:'C'},
+  'dr-how':{label:'How',desc:'Level-wise curriculum. Level 3 open to creative exploration — no rigid structure imposed.',color:'#042C53',text:'#85B7EB',children:[],leaf:true,tags:['process'],domain:null},
+  'lm-what':{label:'What',desc:'RC car 24-minute endurance race + challenge stages. Scaled from Le Mans 24hr concept.',color:'#173404',text:'#97C459',children:[],leaf:true,tags:['lemansar'],domain:null},
+  'lm-who':{label:'Who',desc:'Primary seekers {1–6}. Internal release first, external college open competition.',color:'#173404',text:'#97C459',children:[],leaf:true,tags:['seekers'],domain:null},
+  'lm-where':{label:'Where',desc:'In front of Mansar building on campus. Backup venue: OAT in case of rain.',color:'#173404',text:'#97C459',children:[],leaf:true,tags:['venue'],domain:null},
+  'lm-when':{label:'When',desc:'1st November 2026. External release October. Merchandise release September.',color:'#173404',text:'#97C459',children:[],leaf:true,tags:['timeline'],domain:null},
+  'lm-why':{label:'Why',desc:'RKS evaluator — primarily M. CAD, chassis design, endurance engineering tested under race conditions.',color:'#173404',text:'#97C459',children:[],leaf:true,tags:['RKS','M'],domain:'M'},
+  'lm-how':{label:'How',desc:'24-min race format. Challenge stage format TBD. Documentation and S scored post-event.',color:'#173404',text:'#97C459',children:[],leaf:true,tags:['process'],domain:null},
+  'rks-m':{label:'M — Mechanical',desc:'CAD, design, fabrication. Core domain. Axis 1 of RKS hexagon. Primary for BattleBot + LeMansar.',color:'#412402',text:'#EF9F27',children:[],leaf:true,tags:['core','domain'],domain:'M'},
+  'rks-e':{label:'E — Electrical',desc:'Arduino, electronics, circuit design. Core domain. Axis 2. Spans all three tracks.',color:'#412402',text:'#EF9F27',children:[],leaf:true,tags:['core','domain'],domain:'E'},
+  'rks-c':{label:'C — Coding',desc:'Tinkercad, firmware, programming. Core domain. Axis 3. Critical for Drone Level 2+.',color:'#412402',text:'#EF9F27',children:[],leaf:true,tags:['core','domain'],domain:'C'},
+  'rks-t':{label:'T — Tools',desc:'Tinker Hub, workshop competency, tool usage. Support domain. Axis 4.',color:'#412402',text:'#EF9F27',children:[],leaf:true,tags:['support','domain'],domain:'T'},
+  'rks-d':{label:'D — Docs',desc:'Reports, write-ups, event records, build logs. Support domain. Axis 5. Scored per event.',color:'#412402',text:'#EF9F27',children:[],leaf:true,tags:['support','domain'],domain:'D'},
+  'rks-s':{label:'S — Soft Skills',desc:'Presentation, social media posting, communication. Support domain. Axis 6.',color:'#412402',text:'#EF9F27',children:[],leaf:true,tags:['support','domain'],domain:'S'},
+  'out-what':{label:'What',desc:'Social handles, merchandise, event documentation posts, external competition promotion.',color:'#04342C',text:'#5DCAA5',children:[],leaf:true,tags:['outreach'],domain:null},
+  'out-who':{label:'Who',desc:'Outreach lead owns it. All seekers participate — earn S+D RKS points for posting.',color:'#04342C',text:'#5DCAA5',children:[],leaf:true,tags:['seekers'],domain:null},
+  'out-where':{label:'Where',desc:'All social platforms, campus events, external competition circuits.',color:'#04342C',text:'#5DCAA5',children:[],leaf:true,tags:['platform'],domain:null},
+  'out-when':{label:'When',desc:'Always on. Intensifies at every milestone. Merch launch: October.',color:'#04342C',text:'#5DCAA5',children:[],leaf:true,tags:['timeline'],domain:null},
+  'out-why':{label:'Why',desc:'Symbiotic with pipeline — outreach gives BOSI-6 visibility; pipeline gives outreach its content.',color:'#04342C',text:'#5DCAA5',children:[],leaf:true,tags:['strategy'],domain:null},
+  'out-how':{label:'How',desc:'Seekers post builds and presentations. Outreach lead amplifies and engages external seekers.',color:'#04342C',text:'#5DCAA5',children:[],leaf:true,tags:['process'],domain:null},
+  'tri-what':{label:'What',desc:'48-hour makeathon. Full Tinker Hub + inventory access. All 6 domains tested simultaneously.',color:'#161614',text:'#B4B2A9',children:[],leaf:true,tags:['triathlon'],domain:null},
+  'tri-who':{label:'Who',desc:'10–12 seekers selected by tier threshold (invite or interview). Internal only.',color:'#161614',text:'#B4B2A9',children:[],leaf:true,tags:['seekers'],domain:null},
+  'tri-where':{label:'Where',desc:'Campus workshop with full tool access. Exact venue TBD — requires Director approval.',color:'#161614',text:'#B4B2A9',children:[],leaf:true,tags:['venue'],domain:null},
+  'tri-when':{label:'When',desc:'Every March. Annual. The Goblet. Cycle resets immediately after.',color:'#161614',text:'#B4B2A9',children:[],leaf:true,tags:['annual'],domain:null},
+  'tri-why':{label:'Why',desc:'Overall RKS evaluator. Tests breadth and depth simultaneously — the only event that does.',color:'#161614',text:'#B4B2A9',children:[],leaf:true,tags:['RKS','evaluation'],domain:null},
+  'tri-how':{label:'How',desc:'48hr build sprint. Panel evaluates M+E+C+T+D+S. Format details TBD by council.',color:'#161614',text:'#B4B2A9',children:[],leaf:true,tags:['process'],domain:null},
+};
+
+const SCORES = {};
+const MARKS = {};
+const MERGES = [];
+let mode = 'magnify';
+let currentNode = 'root';
+let navStack = [];
+let panX=0, panY=0;
+let isPanning=false, panStart={x:0,y:0};
+let hovered=null, animating=false;
+let mergeFirst=null;
+let selectedNode=null;
+let infoVisible=true;
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function resize(){
+  const wrap = document.getElementById('canvas-wrap');
+  const r = wrap.getBoundingClientRect();
+  canvas.width = r.width * devicePixelRatio;
+  canvas.height = r.height * devicePixelRatio;
+  canvas.style.width = r.width+'px';
+  canvas.style.height = r.height+'px';
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  draw();
+}
+
+function W(){ return parseInt(canvas.style.width)||canvas.width; }
+function H(){ return parseInt(canvas.style.height)||canvas.height; }
+
+function layout(){
+  const w=W(),h=H();
+  const cx=w/2+panX, cy=h/2+panY;
+  const R=Math.min(w,h)*0.17;
+  const gap=R*2.05;
+  const angles=[90,30,-30,-90,-150,150].map(a=>a*Math.PI/180);
+  const positions=angles.map(a=>({x:cx+gap*Math.cos(a),y:cy+gap*Math.sin(a)}));
+  return{cx,cy,R,positions};
+}
+
+function ptHex(cx,cy,r){
+  const pts=[];
+  for(let i=0;i<6;i++){
+    const a=(30+60*i)*Math.PI/180;
+    pts.push([cx+r*Math.cos(a),cy+r*Math.sin(a)]);
+  }
+  return pts;
+}
+
+function drawHexPath(cx,cy,r){
+  const p=ptHex(cx,cy,r);
+  ctx.beginPath();
+  p.forEach((pt,i)=>i===0?ctx.moveTo(pt[0],pt[1]):ctx.lineTo(pt[0],pt[1]));
+  ctx.closePath();
+}
+
+function hexContains(cx,cy,r,mx,my){
+  return Math.sqrt((mx-cx)**2+(my-cy)**2)<r*1.05;
+}
+
+function wrapLabel(text,cx,cy,maxW,color,size,weight=400){
+  ctx.save();
+  ctx.fillStyle=color;
+  ctx.font=`${weight} ${size}px 'DM Sans', sans-serif`;
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  const words=text.split(' ');
+  const lines=[];let cur='';
+  words.forEach(w=>{
+    const t=cur?cur+' '+w:w;
+    if(ctx.measureText(t).width<maxW){cur=t;}
+    else{if(cur)lines.push(cur);cur=w;}
+  });
+  lines.push(cur);
+  const lh=size*1.3;
+  const startY=cy-(lines.length-1)*lh/2;
+  lines.forEach((l,i)=>ctx.fillText(l,cx,startY+i*lh));
+  ctx.restore();
+}
+
+function draw(){
+  const w=W(),h=H();
+  ctx.clearRect(0,0,w,h);
+
+  // Subtle grid
+  ctx.save();
+  ctx.strokeStyle='rgba(255,255,255,0.03)';
+  ctx.lineWidth=0.5;
+  const gs=40;
+  for(let x=0;x<w;x+=gs){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+  for(let y=0;y<h;y+=gs){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+  ctx.restore();
+
+  const node=GRAPH[currentNode];
+  const {cx,cy,R,positions}=layout();
+  const children=node.children||[];
+
+  // Draw merge links
+  MERGES.forEach(([a,b])=>{
+    const ai=children.indexOf(a),bi=children.indexOf(b);
+    if(ai<0||bi<0)return;
+    const pa=positions[ai],pb=positions[bi];
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(pa.x,pa.y);
+    ctx.lineTo(pb.x,pb.y);
+    ctx.strokeStyle='rgba(239,159,39,0.5)';
+    ctx.lineWidth=1.5;
+    ctx.setLineDash([5,4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  });
+
+  // Connector lines from center to children
+  children.forEach((_,i)=>{
+    const {x,y}=positions[i];
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);ctx.lineTo(x,y);
+    ctx.strokeStyle='rgba(255,255,255,0.04)';
+    ctx.lineWidth=1;ctx.stroke();
+    ctx.restore();
+  });
+
+  // Center hex
+  const cR=R*0.5;
+  drawHexPath(cx,cy,cR);
+  ctx.fillStyle=node.color;ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1;ctx.stroke();
+  wrapLabel(node.label,cx,cy,cR*1.6,node.text,12,500);
+
+  // Child hexes
+  children.forEach((cid,i)=>{
+    const ch=GRAPH[cid];if(!ch)return;
+    const {x,y}=positions[i];
+    const isHov=hovered===cid;
+    const isSel=selectedNode===cid;
+    const isMark=MARKS[cid];
+    const isMergeFirst=mergeFirst===cid;
+    const r=isHov?R*1.04:R;
+    const hasScore=SCORES[cid]!==undefined;
+
+    drawHexPath(x,y,r);
+    ctx.fillStyle=ch.color;ctx.fill();
+
+    // Border
+    ctx.strokeStyle=isMergeFirst?'#EF9F27':isSel?'rgba(255,255,255,0.4)':isHov?'rgba(255,255,255,0.25)':'rgba(255,255,255,0.1)';
+    ctx.lineWidth=isMergeFirst||isSel?2:1;
+    ctx.stroke();
+
+    // Score glow
+    if(hasScore){
+      ctx.save();
+      drawHexPath(x,y,r+4);
+      ctx.strokeStyle='rgba(239,159,39,0.3)';
+      ctx.lineWidth=2;ctx.stroke();
+      ctx.restore();
+    }
+
+    // Mark dot
+    if(isMark){
+      ctx.save();
+      ctx.beginPath();ctx.arc(x+R*0.52,y-R*0.52,5,0,Math.PI*2);
+      ctx.fillStyle='#EF9F27';ctx.fill();ctx.restore();
+    }
+
+    // Leaf indicator
+    if(ch.leaf){
+      ctx.save();
+      ctx.beginPath();ctx.arc(x+R*0.52,y+R*0.52,3.5,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,255,255,0.2)';ctx.fill();ctx.restore();
+    }
+
+    // Has children indicator
+    if(!ch.leaf&&ch.children&&ch.children.length){
+      ctx.save();
+      for(let d=0;d<3;d++){
+        const da=(30+d*60)*Math.PI/180;
+        ctx.beginPath();ctx.arc(x+R*0.48*Math.cos(da),y+R*0.48*Math.sin(da),2,0,Math.PI*2);
+        ctx.fillStyle='rgba(255,255,255,0.25)';ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    wrapLabel(ch.label,x,y,R*1.4,ch.text,11,500);
+  });
+}
+
+function getChild(mx,my){
+  const node=GRAPH[currentNode];
+  const {positions,R}=layout();
+  for(let i=0;i<node.children.length;i++){
+    const {x,y}=positions[i];
+    if(hexContains(x,y,R,mx,my))return node.children[i];
+  }
+  return null;
+}
+
+function setMode(m){
+  mode=m;mergeFirst=null;
+  document.querySelectorAll('.t-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tbtn-'+m)?.classList.add('active');
+  const hints={
+    magnify:'Magnify — click a hexagon to zoom in',
+    move:'Move — drag to pan the canvas',
+    modify:'Modify — click a hexagon to edit its content',
+    mark:'Mark — click to flag a hexagon as a milestone',
+    merge:'Merge — click two hexagons to connect them',
+    score:'Score — click a leaf node to enter its domain score',
+  };
+  document.getElementById('mode-hint').textContent=hints[m]||'';
+  updateMergePanel();
+  draw();
+}
+
+function magnifyInto(id){
+  if(animating)return;
+  const ch=GRAPH[id];
+  if(!ch||ch.leaf){selectNode(id);return;}
+  animating=true;
+  const {positions,R}=layout();
+  const idx=GRAPH[currentNode].children.indexOf(id);
+  const {x,y}=positions[idx];
+  const w=W(),h=H();
+  const targetX=w/2-x+panX,targetY=h/2-y+panY;
+  let t=0;
+  const startPX=panX,startPY=panY;
+  function step(){
+    t+=0.07;
+    const e=t<1?1-Math.pow(1-t,3):1;
+    panX=startPX+(targetX-startPX)*e;
+    panY=startPY+(targetY-startPY)*e;
+    draw();
+    if(t<1){requestAnimationFrame(step);}
+    else{
+      navStack.push(currentNode);
+      currentNode=id;panX=0;panY=0;
+      updateBreadcrumb();selectNode(id);
+      animating=false;draw();
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+function selectNode(id){
+  selectedNode=id;
+  const ch=GRAPH[id];if(!ch)return;
+  document.getElementById('ip-title').textContent=ch.label;
+  document.getElementById('ip-desc').textContent=ch.desc;
+  const tags=ch.tags||[];
+  document.getElementById('ip-tags').innerHTML=tags.map(t=>`<span class="tag">${t}</span>`).join('');
+  const chCount=ch.children?ch.children.length:0;
+  document.getElementById('ip-children').textContent=ch.leaf?'Leaf node (no children)':`${chCount} child nodes`;
+
+  // Score input for score mode or leaf nodes with domain
+  const rksWrap=document.getElementById('ip-rks-wrap');
+  if(mode==='score'&&ch.domain){
+    rksWrap.style.display='block';
+    document.getElementById('ip-score').value=SCORES[id]!==undefined?SCORES[id]:'';
+  } else { rksWrap.style.display='none'; }
+
+  // RKS mini bars for RKS node
+  const domains=['M','E','C','T','D','S'];
+  const mini=document.getElementById('ip-rks-mini');
+  mini.innerHTML=domains.map(d=>{
+    const score=Object.entries(SCORES).find(([k])=>GRAPH[k]&&GRAPH[k].domain===d)?.[1]||0;
+    return `<div class="rks-domain">
+      <span class="rks-d-label">${d}</span>
+      <div class="rks-d-track"><div class="rks-d-fill" style="width:${score*10}%"></div></div>
+      <span class="rks-d-val">${score||'—'}</span>
+    </div>`;
+  }).join('');
+  draw();
+}
+
+function saveScore(){
+  if(!selectedNode)return;
+  const v=parseFloat(document.getElementById('ip-score').value);
+  if(!isNaN(v)&&v>=0&&v<=10){ SCORES[selectedNode]=Math.min(10,Math.max(0,v)); }
+  selectNode(selectedNode);draw();
+}
+
+function updateBreadcrumb(){
+  const all=[...navStack,currentNode];
+  const bc=document.getElementById('breadcrumb');
+  bc.innerHTML=all.map((id,i)=>{
+    const n=GRAPH[id];
+    const cur=i===all.length-1;
+    return `<span class="bc${cur?' active':''}" onclick="jumpTo(${i})">${n?n.label:id}</span>${cur?'':'<span class="bc-sep">›</span>'}`;
+  }).join('');
+}
+
+function jumpTo(idx){
+  const all=[...navStack,currentNode];
+  currentNode=all[idx];
+  navStack=all.slice(0,idx);
+  panX=0;panY=0;
+  updateBreadcrumb();selectNode(currentNode);draw();
+}
+
+function goUp(){
+  if(!navStack.length)return;
+  currentNode=navStack.pop();
+  panX=0;panY=0;
+  updateBreadcrumb();selectNode(currentNode);draw();
+}
+
+function resetView(){ panX=0;panY=0;draw(); }
+
+function toggleInfo(){
+  infoVisible=!infoVisible;
+  document.getElementById('info').style.display=infoVisible?'flex':'none';
+  setTimeout(resize,10);
+}
+
+function updateMergePanel(){
+  const w=document.getElementById('ip-merge-wrap');
+  const msg=document.getElementById('ip-merge-msg');
+  if(mode==='merge'){
+    w.style.display='block';
+    msg.textContent=mergeFirst?`Now click second node to connect to "${GRAPH[mergeFirst]?.label}"...`:'Click first node to start merge';
+  } else { w.style.display='none'; }
+}
+
+canvas.addEventListener('mousemove',e=>{
+  const r=canvas.getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top;
+  if(isPanning&&mode==='move'){
+    panX+=e.clientX-panStart.x;panY+=e.clientY-panStart.y;
+    panStart={x:e.clientX,y:e.clientY};draw();return;
+  }
+  const h=getChild(mx,my);
+  if(h!==hovered){hovered=h;draw();}
+  canvas.style.cursor=h?'pointer':mode==='move'?'grab':'default';
+});
+
+canvas.addEventListener('mousedown',e=>{
+  if(mode==='move'){isPanning=true;panStart={x:e.clientX,y:e.clientY};}
+});
+canvas.addEventListener('mouseup',()=>{isPanning=false;});
+canvas.addEventListener('mouseleave',()=>{isPanning=false;hovered=null;draw();});
+
+canvas.addEventListener('click',e=>{
+  const r=canvas.getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top;
+  const h=getChild(mx,my);if(!h)return;
+  if(mode==='magnify'){magnifyInto(h);}
+  else if(mode==='mark'){MARKS[h]=!MARKS[h];selectNode(h);draw();}
+  else if(mode==='merge'){
+    if(!mergeFirst){mergeFirst=h;updateMergePanel();draw();}
+    else if(mergeFirst!==h){MERGES.push([mergeFirst,h]);mergeFirst=null;updateMergePanel();draw();}
+  }
+  else if(mode==='modify'){
+    const ch=GRAPH[h];
+    const nl=prompt(`Label:`,ch.label);if(nl?.trim())ch.label=nl.trim();
+    const nd=prompt(`Description:`,ch.desc);if(nd?.trim())ch.desc=nd.trim();
+    selectNode(h);draw();
+  }
+  else if(mode==='score'){selectNode(h);}
+  else{selectNode(h);}
+});
+
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  panX-=e.deltaX*0.5;panY-=e.deltaY*0.5;draw();
+},{passive:false});
+
+updateBreadcrumb();
+selectNode('root');
+new ResizeObserver(resize).observe(document.getElementById('canvas-wrap'));
+window.addEventListener('resize',resize);
+resize();
+</script>
+</body>
+</html>
